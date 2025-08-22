@@ -1,0 +1,160 @@
+**Product Name**: TBD (e.g., "SubScout", "CustDevAI")
+
+---
+
+## 1. **Overview**
+
+This app helps solo developers discover, validate, and engage with potential customers by leveraging Reddit as an initial customer development channel. It automates subreddit discovery, surfaces user pain points, drafts first-contact posts, and provides insights through a customer research dashboard.
+
+---
+
+## 2. **Goals & Objectives**
+
+* **Automate customer discovery**: Identify relevant communities where potential customers gather.
+* **Lower barrier to customer development**: Draft posts and suggest outreach strategies.
+* **Surface real user problems**: Capture and cluster discussions, pain points, and feature requests.
+* **Aid product iteration**: Provide actionable insights and a high-level view of user needs.
+
+---
+
+## 3. **Target Users**
+
+* **Primary**: Solo indie hackers, bootstrapped founders, early-stage devs who lack a team.
+* **Secondary**: Small startup teams validating MVPs.
+
+Pain Points Solved:
+
+* Difficulty identifying where potential users are.
+* Uncertainty about how to approach communities.
+* Lack of time to mine discussions for insights.
+* Need for structured data from unstructured conversations.
+
+---
+
+## 4. **Key Features**
+
+### 4.1 Onboarding
+
+* **Input**: User provides their app’s URL.
+* **AI Analysis**: Extract app purpose, features, and likely customer base.
+* **Output**: Initial customer profile hypothesis (e.g., “Productivity SaaS for freelancers”).
+
+### 4.2 Subreddit Discovery
+
+* Crawl/search Reddit for communities aligned with customer profile.
+* Present a ranked list of recommended subreddits with metadata (size, activity, engagement).
+* User selects target subreddits via checkbox.
+
+### 4.3 Subreddit Scanning & Monitoring
+
+* Each day, scan one subreddit in-depth.
+* Collect:
+
+  * **Pain Points** (user frustrations, unmet needs).
+  * **Feature Requests** (desired solutions).
+  * **Gaps & Trends** (what’s missing, recurring themes).
+* Store data in database tagged by subreddit/thread.
+
+### 4.4 First-Contact Drafting
+
+* Generate one **“first contact” post** per subreddit.
+* Draft aligns with subreddit rules, tone, and cultural norms.
+* User approval step required before posting.
+
+### 4.5 Insights Dashboard
+
+* Display:
+
+  * Top pain points (frequency-weighted).
+  * Common feature requests.
+  * Emerging trends.
+  * Word cloud of recurring topics.
+* Export insights to CSV/Markdown.
+
+### 4.6 PRD Generator (Stretch Goal)
+
+* Generate draft PRD sections based on user problem data collected.
+* Helps solo devs turn insights into structured product plans.
+
+---
+
+## 5. **User Journey**
+
+1. **Sign up / log in.**
+2. **Enter app URL.**
+3. AI analyzes and proposes target customer profile.
+4. Subreddit discovery → user selects target communities.
+5. App begins daily scan (1 subreddit/day).
+6. Each day:
+
+   * Subreddit scan results visible on dashboard.
+   * Draft “first contact” post generated → user approves or edits.
+7. Dashboard continuously aggregates insights into themes.
+8. Export PRD-style report for product iteration.
+
+---
+
+## 6. **Technical Requirements**
+
+### 6.1 Data Sources
+
+* Reddit API (official or Pushshift alternative for historical data).
+* AI models for:
+
+  * Website analysis (NLP).
+  * Subreddit selection (semantic matching).
+  * Insight extraction (topic modeling, clustering).
+  * Post drafting (LLM fine-tuned for tone compliance).
+
+### 6.2 Architecture
+
+* **Frontend**: React / Next.js (dashboard, onboarding flow).
+* **Backend**: Node.js or Python (API + integrations).
+* **Database**: PostgreSQL (structured data + insights).
+* **AI Layer**: Perplexity API(analysis + drafting).
+* **Scheduler**: Background job system (daily scans).
+
+### 6.3 Security & Compliance
+
+* Store minimal user data (URL, chosen subreddits, insights).
+* Reddit terms of service compliance for data usage.
+
+---
+
+## 7. **MVP Scope**
+
+✅ Onboarding with app URL analysis
+✅ Subreddit discovery & selection
+✅ One subreddit scan/day
+✅ First-contact draft generation
+✅ Insights dashboard (basic stats, pain points)
+
+---
+
+## 8. **Future Enhancements**
+
+* Multi-platform support (Twitter, Discord, Hacker News).
+* Ongoing subreddit monitoring (not just first contact).
+* Competitor tracking (mentions of other apps).
+* Collaboration features (team dashboards).
+* Auto-scheduling/queueing approved posts.
+
+---
+
+## 9. **Success Metrics**
+
+* **Activation**: % of users who complete onboarding and select subreddits.
+* **Engagement**: Avg. # of daily scans reviewed by user.
+* **Value**: # of insights tagged as “useful” by user.
+* **Retention**: % of users returning weekly to check insights.
+
+---
+
+## 10. **Risks & Challenges**
+
+* **Reddit API restrictions**: Rate limits, ToS changes.
+* **Community acceptance**: Risk of posts being flagged as spam if not authentic.
+* **Data quality**: Extracting actionable insights from noisy discussions.
+
+---
+
