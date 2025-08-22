@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { SignInButton } from "@clerk/clerk-react";
 import { 
   Search, 
   BarChart3, 
@@ -21,13 +22,14 @@ export default function Landing() {
               <span className="text-xl font-bold text-gray-900">SubScout</span>
             </div>
             <div className="flex items-center">
-              <Button 
-                onClick={() => window.location.href = '/api/login'}
-                className="bg-primary hover:bg-primary/90"
-                data-testid="button-login"
-              >
-                Get Started
-              </Button>
+              <SignInButton>
+                <Button 
+                  className="bg-primary hover:bg-primary/90"
+                  data-testid="button-login"
+                >
+                  Get Started
+                </Button>
+              </SignInButton>
             </div>
           </div>
         </div>
@@ -44,14 +46,15 @@ export default function Landing() {
             Discover target communities, analyze user needs, and generate engagement strategies 
             using AI-powered insights from Reddit discussions.
           </p>
-          <Button 
-            size="lg"
-            onClick={() => window.location.href = '/api/login'}
-            className="bg-primary hover:bg-primary/90 px-8 py-4 text-lg"
-            data-testid="button-get-started"
-          >
-            Start Your Customer Journey
-          </Button>
+          <SignInButton>
+            <Button 
+              size="lg"
+              className="bg-primary hover:bg-primary/90 px-8 py-4 text-lg"
+              data-testid="button-get-started"
+            >
+              Start Your Customer Journey
+            </Button>
+          </SignInButton>
         </div>
 
         {/* Features Grid */}
@@ -182,14 +185,15 @@ export default function Landing() {
           <p className="text-xl text-gray-600 mb-8">
             Start building better products with real user insights.
           </p>
-          <Button 
-            size="lg"
-            onClick={() => window.location.href = '/api/login'}
-            className="bg-primary hover:bg-primary/90 px-8 py-4 text-lg"
-            data-testid="button-start-now"
-          >
-            Get Started for Free
-          </Button>
+          <SignInButton>
+            <Button 
+              size="lg"
+              className="bg-primary hover:bg-primary/90 px-8 py-4 text-lg"
+              data-testid="button-start-now"
+            >
+              Get Started for Free
+            </Button>
+          </SignInButton>
         </div>
       </div>
     </div>

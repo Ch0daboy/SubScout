@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, syncUser } from "./clerkAuth";
 import { analyzeAppUrl, generateFirstContactPost, analyzePainPointTrends } from "./gemini";
 import { discoverSubreddits } from "./perplexity";
 import { redditAPI } from "./reddit";
@@ -12,9 +12,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
@@ -24,9 +24,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // App routes
-  app.post('/api/apps', isAuthenticated, async (req: any, res) => {
+  app.post('/api/apps', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { url } = req.body;
 
       if (!url) {
@@ -64,9 +64,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/apps', isAuthenticated, async (req: any, res) => {
+  app.get('/api/apps', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const apps = await storage.getAppsByUserId(userId);
       res.json(apps);
     } catch (error) {
@@ -75,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/apps/:id', isAuthenticated, async (req, res) => {
+  app.get('/api/apps/:id', [isAuthenticated, syncUser], async (req, res) => {
     try {
       const { id } = req.params;
       const app = await storage.getApp(id);
@@ -92,9 +92,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Subreddit routes
-  app.post('/api/apps/:appId/subreddits/discover', isAuthenticated, async (req: any, res) => {
+  app.post('/api/apps/:appId/subreddits/discover', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { appId } = req.params;
 
       const app = await storage.getApp(appId);
@@ -142,7 +142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/apps/:appId/subreddits', isAuthenticated, async (req, res) => {
+  app.get('/api/apps/:appId/subreddits', [isAuthenticated, syncUser], async (req, res) => {
     try {
       const { appId } = req.params;
       const subreddits = await storage.getSubredditsByAppId(appId);
@@ -153,9 +153,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/subreddits/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/subreddits/:id', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const updateData = req.body;
 
@@ -178,9 +178,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Post routes
-  app.post('/api/posts/generate', isAuthenticated, async (req: any, res) => {
+  app.post('/api/posts/generate', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { subredditId, appId } = req.body;
 
       const subreddit = await storage.updateSubreddit(subredditId, {});
@@ -221,9 +221,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/posts', isAuthenticated, async (req: any, res) => {
+  app.get('/api/posts', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { status } = req.query;
 
       const posts = status 
@@ -237,9 +237,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/posts/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/posts/:id', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const updateData = req.body;
 
@@ -262,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Insights routes
-  app.get('/api/apps/:appId/insights', isAuthenticated, async (req, res) => {
+  app.get('/api/apps/:appId/insights', [isAuthenticated, syncUser], async (req, res) => {
     try {
       const { appId } = req.params;
       const insights = await storage.getInsightsByAppId(appId);
@@ -273,9 +273,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/insights/pain-points', isAuthenticated, async (req: any, res) => {
+  app.get('/api/insights/pain-points', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { limit = 10 } = req.query;
       const painPoints = await storage.getTopPainPoints(userId, parseInt(limit as string));
       res.json(painPoints);
@@ -285,9 +285,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/insights/trending', isAuthenticated, async (req: any, res) => {
+  app.get('/api/insights/trending', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { limit = 10 } = req.query;
       const trends = await storage.getTrendingTopics(userId, parseInt(limit as string));
       res.json(trends);
@@ -298,9 +298,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Activity routes
-  app.get('/api/activities', isAuthenticated, async (req: any, res) => {
+  app.get('/api/activities', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { limit = 20 } = req.query;
       const activities = await storage.getRecentActivities(userId, parseInt(limit as string));
       res.json(activities);
@@ -311,9 +311,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reddit integration routes
-  app.post('/api/subreddits/:id/scan', isAuthenticated, async (req: any, res) => {
+  app.post('/api/subreddits/:id/scan', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       
       const subreddit = await storage.getSubreddit(id);
@@ -370,9 +370,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/subreddits/:id/posts', isAuthenticated, async (req: any, res) => {
+  app.get('/api/subreddits/:id/posts', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const { limit = 25 } = req.query;
       
@@ -391,9 +391,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/subreddits/:id/search', isAuthenticated, async (req: any, res) => {
+  app.post('/api/subreddits/:id/search', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const { query, limit = 10 } = req.body;
       
@@ -413,9 +413,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stats routes
-  app.get('/api/stats', isAuthenticated, async (req: any, res) => {
+  app.get('/api/stats', [isAuthenticated, syncUser], async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const stats = await storage.getUserStats(userId);
       res.json(stats);
     } catch (error) {
