@@ -1,6 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+// Initialize Gemini AI client - will be lazy loaded when needed
+let ai: GoogleGenAI | null = null;
+
+function getGeminiClient(): GoogleGenAI {
+  if (!ai) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY environment variable is required");
+    }
+    ai = new GoogleGenAI({ apiKey });
+  }
+  return ai;
+}
 
 export async function analyzeAppUrl(url: string): Promise<{
   name: string;
@@ -13,8 +25,9 @@ export async function analyzeAppUrl(url: string): Promise<{
   try {
     const prompt = `Please analyze this application URL and provide insights: ${url}. Focus on identifying the primary user persona, key pain points the app solves, main features, and relevant tags for categorization. Respond with JSON in this exact format: { 'name': string, 'description': string, 'targetAudience': string, 'painPoints': string[], 'features': string[], 'tags': string[] }`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+    const client = getGeminiClient();
+    const response = await client.models.generateContent({
+      model: "gemini-2.0-flash-exp",
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -61,8 +74,9 @@ export async function generateFirstContactPost(
     
     Respond with JSON in this format: { 'title': string, 'content': string }`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+    const client = getGeminiClient();
+    const response = await client.models.generateContent({
+      model: "gemini-2.0-flash-exp",
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -92,8 +106,9 @@ export async function analyzePainPointTrends(insights: string[]): Promise<{
   try {
     const prompt = `Analyze these customer insights and pain points to identify key trends: ${insights.join('\n\n')}. Respond with JSON in this format: { 'trends': [{ 'topic': string, 'frequency': number, 'growth': string }], 'summary': string }. Growth should be 'rising', 'stable', or 'declining'.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+    const client = getGeminiClient();
+    const response = await client.models.generateContent({
+      model: "gemini-2.0-flash-exp",
       config: {
         responseMimeType: "application/json",
         responseSchema: {
