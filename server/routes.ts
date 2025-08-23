@@ -5,7 +5,7 @@ import { analyzeAppUrl, generateFirstContactPost, analyzePainPointTrends } from 
 import { discoverSubreddits } from "./perplexity.js";
 import { redditAPI } from "./reddit.js";
 import { supabase } from "./db.js";
-import { isAuthenticated, syncUser, type AuthRequest } from "./supabaseAuth.js";
+import { isAuthenticated, syncUser, requireAuth, type AuthRequest } from "./supabaseAuth.js";
 import { 
   validateBody, 
   validateQuery, 
@@ -129,7 +129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/apps', isAuthenticated, syncUser, async (req: any, res) => {
+  app.get('/api/apps', isAuthenticated, syncUser, requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const apps = await storage.getAppsByUserId(userId);
@@ -372,7 +372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Activity routes
-  app.get('/api/activities', isAuthenticated, syncUser, async (req: any, res) => {
+  app.get('/api/activities', isAuthenticated, syncUser, requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { limit = 20 } = req.query;
@@ -489,7 +489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stats routes
-  app.get('/api/stats', isAuthenticated, syncUser, async (req: any, res) => {
+  app.get('/api/stats', isAuthenticated, syncUser, requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const stats = await storage.getUserStats(userId);
