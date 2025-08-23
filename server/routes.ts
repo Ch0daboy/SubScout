@@ -6,6 +6,14 @@ import { discoverSubreddits } from "./perplexity.js";
 import { redditAPI } from "./reddit.js";
 import { supabase } from "./db.js";
 import { isAuthenticated, syncUser, type AuthRequest } from "./supabaseAuth.js";
+import { 
+  validateBody, 
+  validateQuery, 
+  validateParams,
+  commonSchemas,
+  rateLimit,
+  sanitizeString
+} from "./validation.js";
 import type { 
   InsertApp, 
   InsertSubreddit, 
@@ -16,7 +24,7 @@ import type {
 export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth routes
-  app.get('/api/auth/user', [isAuthenticated, syncUser], async (req: any, res) => {
+  app.get('/api/auth/user', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
@@ -27,18 +35,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // App routes
-  app.post('/api/apps', [isAuthenticated, syncUser], async (req: any, res) => {
+  // App routes with validation and rate limiting
+  app.post('/api/apps', 
+    rateLimit({ windowMs: 60000, maxRequests: 5, message: 'Too many app analysis requests' }),
+    isAuthenticated, 
+    syncUser, 
+    validateBody(commonSchemas.createApp),
+    async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { url } = req.body;
 
-      if (!url) {
-        return res.status(400).json({ message: "URL is required" });
-      }
-
       // Analyze the app URL using Gemini AI
-      const analysis = await analyzeAppUrl(url);
+      const analysis = await analyzeAppUrl(sanitizeString(url));
 
       const appData: InsertApp = {
         user_id: userId,
@@ -55,7 +64,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Log activity
       await storage.createActivity({
-        userId,
+        user_id: userId,
         type: 'app_analyzed',
         description: `Analyzed app: ${analysis.name}`,
         metadata: { appId: app.id, url },
@@ -68,7 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/apps', [isAuthenticated, syncUser], async (req: any, res) => {
+  app.get('/api/apps', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const apps = await storage.getAppsByUserId(userId);
@@ -79,13 +88,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/apps/:id', [isAuthenticated, syncUser], async (req, res) => {
+  app.get('/api/apps/:id', 
+    isAuthenticated, 
+    syncUser, 
+    validateParams(commonSchemas.id),
+    async (req: any, res) => {
     try {
       const { id } = req.params;
       const app = await storage.getApp(id);
       
       if (!app) {
         return res.status(404).json({ message: "App not found" });
+      }
+
+      // Ensure user owns the app
+      if (app.user_id !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
       }
 
       res.json(app);
@@ -96,18 +114,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Subreddit routes
-  app.post('/api/apps/:appId/subreddits/discover', [isAuthenticated, syncUser], async (req: any, res) => {
+  app.post('/api/apps/:appId/subreddits/discover', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { appId } = req.params;
 
       const app = await storage.getApp(appId);
-      if (!app || app.userId !== userId) {
+      if (!app || app.user_id !== userId) {
         return res.status(404).json({ message: "App not found" });
       }
 
       // Discover subreddits using Perplexity AI
-      const recommendations = await discoverSubreddits(app.description || '', app.targetAudience || '');
+      const recommendations = await discoverSubreddits(app.description || '', app.target_audience || '');
 
       // Enhance with real Reddit data and store discovered subreddits
       const subreddits = [];
@@ -115,17 +133,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get real Reddit data to enhance the recommendation
         const redditInfo = await redditAPI.getSubredditInfo(rec.name);
         
-        const subredditData = insertSubredditSchema.parse({
-          userId,
-          appId,
+        const subredditData: InsertSubreddit = {
+          user_id: userId,
+          app_id: appId,
           name: rec.name,
-          displayName: redditInfo?.displayName || rec.displayName,
+          display_name: redditInfo?.displayName || rec.displayName,
           description: redditInfo?.description || rec.description,
           subscribers: redditInfo?.subscribers || rec.subscribers,
           activity: rec.activity,
-          matchScore: rec.matchScore.toString(),
-          isMonitored: false,
-        });
+          match_score: rec.matchScore,
+          is_monitored: false,
+        };
 
         const subreddit = await storage.createSubreddit(subredditData);
         subreddits.push(subreddit);
@@ -133,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Log activity
       await storage.createActivity({
-        userId,
+        user_id: userId,
         type: 'subreddits_discovered',
         description: `Discovered ${subreddits.length} subreddits for ${app.name}`,
         metadata: { appId, count: subreddits.length },
@@ -146,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/apps/:appId/subreddits', [isAuthenticated, syncUser], async (req, res) => {
+  app.get('/api/apps/:appId/subreddits', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const { appId } = req.params;
       const subreddits = await storage.getSubredditsByAppId(appId);
@@ -157,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/subreddits/:id', [isAuthenticated, syncUser], async (req: any, res) => {
+  app.patch('/api/subreddits/:id', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { id } = req.params;
@@ -167,7 +185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (updateData.isMonitored) {
         await storage.createActivity({
-          userId,
+          user_id: userId,
           type: 'subreddit_monitored',
           description: `Started monitoring r/${subreddit.name}`,
           metadata: { subredditId: id },
@@ -182,15 +200,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Post routes
-  app.post('/api/posts/generate', [isAuthenticated, syncUser], async (req: any, res) => {
+  app.post('/api/posts/generate', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { subredditId, appId } = req.body;
 
-      const subreddit = await storage.updateSubreddit(subredditId, {});
+      const subreddit = await storage.getSubreddit(subredditId);
       const app = await storage.getApp(appId);
 
-      if (!subreddit || !app || app.userId !== userId) {
+      if (!subreddit || !app || app.user_id !== userId) {
         return res.status(404).json({ message: "Subreddit or app not found" });
       }
 
@@ -198,13 +216,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const postData = await generateFirstContactPost(
         subreddit.name,
         app.description || '',
-        app.painPoints || []
+        app.pain_points || []
       );
 
       const post = await storage.createPost({
-        userId,
-        appId,
-        subredditId,
+        user_id: userId,
+        app_id: appId,
+        subreddit_id: subredditId,
         title: postData.title,
         content: postData.content,
         status: 'draft',
@@ -212,7 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Log activity
       await storage.createActivity({
-        userId,
+        user_id: userId,
         type: 'post_generated',
         description: `Generated post for r/${subreddit.name}`,
         metadata: { postId: post.id, subredditId, appId },
@@ -225,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/posts', [isAuthenticated, syncUser], async (req: any, res) => {
+  app.get('/api/posts', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { status } = req.query;
@@ -241,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/posts/:id', [isAuthenticated, syncUser], async (req: any, res) => {
+  app.patch('/api/posts/:id', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { id } = req.params;
@@ -251,7 +269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (updateData.status === 'approved') {
         await storage.createActivity({
-          userId,
+          user_id: userId,
           type: 'post_approved',
           description: `Approved post: ${post.title}`,
           metadata: { postId: id },
@@ -266,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Insights routes
-  app.get('/api/apps/:appId/insights', [isAuthenticated, syncUser], async (req, res) => {
+  app.get('/api/apps/:appId/insights', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const { appId } = req.params;
       const insights = await storage.getInsightsByAppId(appId);
@@ -277,7 +295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/insights/pain-points', [isAuthenticated, syncUser], async (req: any, res) => {
+  app.get('/api/insights/pain-points', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { limit = 10 } = req.query;
@@ -289,7 +307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/insights/trending', [isAuthenticated, syncUser], async (req: any, res) => {
+  app.get('/api/insights/trending', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { limit = 10 } = req.query;
@@ -302,7 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Activity routes
-  app.get('/api/activities', [isAuthenticated, syncUser], async (req: any, res) => {
+  app.get('/api/activities', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { limit = 20 } = req.query;
@@ -315,13 +333,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reddit integration routes
-  app.post('/api/subreddits/:id/scan', [isAuthenticated, syncUser], async (req: any, res) => {
+  app.post('/api/subreddits/:id/scan', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { id } = req.params;
       
       const subreddit = await storage.getSubreddit(id);
-      if (!subreddit || subreddit.userId !== userId) {
+      if (!subreddit || subreddit.user_id !== userId) {
         return res.status(404).json({ message: "Subreddit not found" });
       }
 
@@ -332,31 +350,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const insights = [];
       for (const painPoint of scanResults.painPoints) {
         const insight = await storage.createInsight({
-          userId,
-          appId: subreddit.appId,
-          subredditId: id,
+          user_id: userId,
+          app_id: subreddit.app_id,
+          subreddit_id: id,
           type: 'pain_point',
+          title: painPoint,
           content: painPoint,
-          metadata: { source: 'reddit_scan' }
+          tags: { source: 'reddit_scan' }
         });
         insights.push(insight);
       }
       
       for (const featureRequest of scanResults.featureRequests) {
         const insight = await storage.createInsight({
-          userId,
-          appId: subreddit.appId,
-          subredditId: id,
+          user_id: userId,
+          app_id: subreddit.app_id,
+          subreddit_id: id,
           type: 'feature_request',
+          title: featureRequest,
           content: featureRequest,
-          metadata: { source: 'reddit_scan' }
+          tags: { source: 'reddit_scan' }
         });
         insights.push(insight);
       }
       
       // Log activity
       await storage.createActivity({
-        userId,
+        user_id: userId,
         type: 'subreddit_scanned',
         description: `Scanned r/${subreddit.name} for insights`,
         metadata: { subredditId: id, insightsFound: insights.length }
@@ -374,14 +394,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/subreddits/:id/posts', [isAuthenticated, syncUser], async (req: any, res) => {
+  app.get('/api/subreddits/:id/posts', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { id } = req.params;
       const { limit = 25 } = req.query;
       
       const subreddit = await storage.getSubreddit(id);
-      if (!subreddit || subreddit.userId !== userId) {
+      if (!subreddit || subreddit.user_id !== userId) {
         return res.status(404).json({ message: "Subreddit not found" });
       }
 
@@ -395,14 +415,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/subreddits/:id/search', [isAuthenticated, syncUser], async (req: any, res) => {
+  app.post('/api/subreddits/:id/search', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const { id } = req.params;
       const { query, limit = 10 } = req.body;
       
       const subreddit = await storage.getSubreddit(id);
-      if (!subreddit || subreddit.userId !== userId) {
+      if (!subreddit || subreddit.user_id !== userId) {
         return res.status(404).json({ message: "Subreddit not found" });
       }
 
@@ -417,7 +437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stats routes
-  app.get('/api/stats', [isAuthenticated, syncUser], async (req: any, res) => {
+  app.get('/api/stats', isAuthenticated, syncUser, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const stats = await storage.getUserStats(userId);

@@ -1,9 +1,24 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { AppError, statusToCode } from "@shared/errors";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const contentType = res.headers.get("content-type") || "";
+    let message = res.statusText;
+    let details: unknown = undefined;
+    try {
+      if (contentType.includes("application/json")) {
+        const body = await res.json();
+        message = body?.message || message;
+        details = body;
+      } else {
+        const text = await res.text();
+        message = text || message;
+      }
+    } catch {
+      // fall back to statusText
+    }
+    throw new AppError(message, { status: res.status, code: statusToCode(res.status), details });
   }
 }
 

@@ -29,6 +29,7 @@ export interface IStorage {
   // Subreddit operations
   createSubreddit(subreddit: InsertSubreddit): Promise<Subreddit>;
   getSubredditsByAppId(appId: string): Promise<Subreddit[]>;
+  getSubreddit(id: string): Promise<Subreddit | undefined>;
   getMonitoredSubredditsByUserId(userId: string): Promise<Subreddit[]>;
   updateSubreddit(id: string, subreddit: Partial<InsertSubreddit>): Promise<Subreddit>;
   
@@ -147,6 +148,16 @@ export class DatabaseStorage implements IStorage {
       .eq('app_id', appId);
     
     return subreddits || [];
+  }
+
+  async getSubreddit(id: string): Promise<Subreddit | undefined> {
+    const { data: subreddit } = await supabase
+      .from('subreddits')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    return subreddit || undefined;
   }
 
   async getMonitoredSubredditsByUserId(userId: string): Promise<Subreddit[]> {

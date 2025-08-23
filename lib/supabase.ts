@@ -9,7 +9,32 @@ if (!supabaseUrl || !supabaseKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Database types
+// Database types with proper interfaces
+export interface PainPoint {
+  title: string;
+  description?: string;
+  priority?: 'low' | 'medium' | 'high';
+  frequency?: number;
+}
+
+export interface AppFeature {
+  name: string;
+  description?: string;
+  category?: string;
+}
+
+export interface AppTag {
+  name: string;
+  category?: 'industry' | 'technology' | 'audience' | 'feature';
+}
+
+export interface InsightTags {
+  [key: string]: string | number | boolean;
+  source?: string;
+  confidence?: number;
+  category?: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -50,9 +75,9 @@ export interface Database {
           name: string | null;
           description: string | null;
           target_audience: string | null;
-          pain_points: any;
-          features: any;
-          tags: any;
+          pain_points: PainPoint[] | null;
+          features: AppFeature[] | null;
+          tags: AppTag[] | null;
           created_at: string;
           updated_at: string;
         };
@@ -63,9 +88,9 @@ export interface Database {
           name?: string | null;
           description?: string | null;
           target_audience?: string | null;
-          pain_points?: any;
-          features?: any;
-          tags?: any;
+          pain_points?: PainPoint[] | null;
+          features?: AppFeature[] | null;
+          tags?: AppTag[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -76,9 +101,9 @@ export interface Database {
           name?: string | null;
           description?: string | null;
           target_audience?: string | null;
-          pain_points?: any;
-          features?: any;
-          tags?: any;
+          pain_points?: PainPoint[] | null;
+          features?: AppFeature[] | null;
+          tags?: AppTag[] | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -141,7 +166,7 @@ export interface Database {
           comments: number | null;
           sentiment: string | null;
           priority: string | null;
-          tags: any;
+          tags: InsightTags | null;
           created_at: string;
         };
         Insert: {
@@ -157,7 +182,7 @@ export interface Database {
           comments?: number | null;
           sentiment?: string | null;
           priority?: string | null;
-          tags?: any;
+          tags?: InsightTags | null;
           created_at?: string;
         };
         Update: {
@@ -173,7 +198,7 @@ export interface Database {
           comments?: number | null;
           sentiment?: string | null;
           priority?: string | null;
-          tags?: any;
+          tags?: InsightTags | null;
           created_at?: string;
         };
       };
@@ -224,7 +249,7 @@ export interface Database {
           user_id: string;
           type: string;
           description: string;
-          metadata: any;
+          metadata: Record<string, unknown> | null;
           created_at: string;
         };
         Insert: {
@@ -232,7 +257,7 @@ export interface Database {
           user_id: string;
           type: string;
           description: string;
-          metadata?: any;
+          metadata?: Record<string, unknown> | null;
           created_at?: string;
         };
         Update: {
@@ -240,7 +265,7 @@ export interface Database {
           user_id?: string;
           type?: string;
           description?: string;
-          metadata?: any;
+          metadata?: Record<string, unknown> | null;
           created_at?: string;
         };
       };
