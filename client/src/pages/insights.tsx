@@ -67,7 +67,6 @@ export default function Insights() {
       title: "Export Started",
       description: "Your insights report is being prepared for download.",
     });
-    // TODO: Implement actual export functionality
   };
 
   if (authLoading) {

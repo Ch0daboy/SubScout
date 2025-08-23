@@ -136,7 +136,6 @@ Pain Points Solved:
 * Multi-platform support (Twitter, Discord, Hacker News).
 * Ongoing subreddit monitoring (not just first contact).
 * Competitor tracking (mentions of other apps).
-* Collaboration features (team dashboards).
 * Auto-scheduling/queueing approved posts.
 
 ---
