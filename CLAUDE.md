@@ -16,16 +16,16 @@ SubScout is a customer development platform for solo developers and indie hacker
 - `npm run vercel-build` - Vercel-specific build command
 
 ### Database Management
-- `npm run db:push` - Push database schema changes to Neon Database using Drizzle Kit
-- Database migrations are managed through Drizzle Kit and stored in `./migrations/`
+- Database schema is managed through Supabase migrations
+- Use the Supabase dashboard or CLI to manage schema changes
 
 ## Architecture
 
 ### Tech Stack
 - **Frontend**: React 18 + TypeScript, Wouter for routing, Tailwind CSS + shadcn/ui components
 - **Backend**: Express.js with TypeScript, RESTful API design
-- **Database**: PostgreSQL (Neon Database) with Drizzle ORM
-- **Auth**: Clerk Authentication with React SDK and Express middleware
+- **Database**: PostgreSQL (Supabase) with Supabase client
+- **Auth**: Supabase Authentication with React hooks
 - **AI**: Google Gemini for app analysis and content generation, Perplexity for subreddit discovery
 - **Build**: Vite for client, esbuild for server bundling
 - **Deployment**: Vercel with serverless functions
@@ -43,21 +43,20 @@ server/             # Express.js backend
   index.ts          # Main server entry point
   routes.ts         # All API route definitions
   storage.ts        # Database operations layer
-  db.ts             # Database connection and configuration
-  gemini.ts         # OpenAI/Gemini AI integration
+  db.ts             # Supabase client configuration
+  gemini.ts         # Google Gemini AI integration
   perplexity.ts     # Perplexity AI integration for subreddit discovery
   reddit.ts         # Reddit API integration
-  clerkAuth.ts      # Clerk authentication setup and middleware
 
-shared/             # Code shared between client and server
-  schema.ts         # Database schema with Drizzle ORM and Zod validation
+lib/                # Shared configuration
+  supabase.ts       # Supabase client configuration and types
 ```
 
 ### Key Design Patterns
 
-**Shared Schema**: Database schema defined once in `shared/schema.ts` using Drizzle ORM with Zod validation, shared between client and server for type safety.
+**Shared Types**: Database types defined in `lib/supabase.ts` using Supabase's type generation, shared between client and server for type safety.
 
-**Storage Layer**: Abstracted database operations in `server/storage.ts` provide a clean interface for all CRUD operations.
+**Storage Layer**: Abstracted database operations in `server/storage.ts` provide a clean interface for all CRUD operations using Supabase client.
 
 **Route Structure**: RESTful API endpoints organized by resource:
 - `/api/auth/*` - Authentication endpoints
@@ -67,7 +66,7 @@ shared/             # Code shared between client and server
 - `/api/insights/*` - Pain point and trend analysis
 - `/api/activities/*` - User activity logging
 
-**Authentication Flow**: Clerk authentication provides secure user management with JWT tokens and React SDK integration.
+**Authentication Flow**: Supabase authentication provides secure user management with JWT tokens and React hooks integration.
 
 **AI Integration Pattern**: Three AI services coordinated through modular functions:
 - Google Gemini for app analysis and content generation
@@ -77,7 +76,7 @@ shared/             # Code shared between client and server
 ### Database Schema
 
 Core entities with relationships:
-- **Users** - Clerk authenticated users (ID serves as primary key)
+- **Profiles** - User profile data (extends Supabase auth.users)
 - **Apps** - Analyzed applications with extracted metadata (target audience, pain points, features)
 - **Subreddits** - Discovered communities with match scores and monitoring status
 - **Insights** - Pain points and trends extracted from subreddit discussions
@@ -87,19 +86,21 @@ Core entities with relationships:
 ### State Management
 
 **Client State**: TanStack Query (React Query) for server state management with caching
-**Authentication**: Custom `useAuth` hook wrapping Clerk's authentication state
+**Authentication**: Custom `useAuth` hook wrapping Supabase's authentication state
 **UI State**: React state with shadcn/ui components for consistent design system
 
 ### Environment Configuration
 
 Required environment variables:
-- `DATABASE_URL` - Neon Database connection string
+- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_ANON_KEY` - Supabase anonymous key
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (server-side)
+- `VITE_SUPABASE_URL` - Supabase project URL (client-side)
+- `VITE_SUPABASE_ANON_KEY` - Supabase anonymous key (client-side)
 - `GEMINI_API_KEY` - Google Gemini API access
 - `PERPLEXITY_API_KEY` - Perplexity API access
 - `REDDIT_CLIENT_ID` - Reddit API client ID
 - `REDDIT_CLIENT_SECRET` - Reddit API client secret
-- `CLERK_SECRET_KEY` - Clerk backend authentication
-- `VITE_CLERK_PUBLISHABLE_KEY` - Clerk frontend authentication
 - `FRONTEND_URL` - Frontend URL for CORS configuration (production)
 
 ### Development Notes
@@ -118,5 +119,5 @@ Required environment variables:
 - Environment variables configured in Vercel dashboard
 - CORS configured for production domain
 
-**Database**: Neon Database provides serverless PostgreSQL with automatic scaling
-**Authentication**: Clerk handles user management, session tokens, and security
+**Database**: Supabase provides PostgreSQL with built-in authentication and real-time capabilities
+**Authentication**: Supabase handles user management, session tokens, and Row Level Security

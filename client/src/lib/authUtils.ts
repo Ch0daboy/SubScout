@@ -1,16 +1,14 @@
-import { useAuth } from "@clerk/clerk-react";
+import { supabase } from "../../../lib/supabase.js";
 
 export function isUnauthorizedError(error: Error): boolean {
   return /^401: .*Unauthorized/.test(error.message);
 }
 
 export function useAuthToken() {
-  const { getToken } = useAuth();
-  
   return {
     getAuthHeaders: async () => {
-      const token = await getToken();
-      return token ? { Authorization: `Bearer ${token}` } : {};
+      const { data: { session } } = await supabase.auth.getSession();
+      return session ? { Authorization: `Bearer ${session.access_token}` } : {};
     }
   };
 }

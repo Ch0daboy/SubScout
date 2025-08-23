@@ -1,15 +1,19 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, syncUser } from "./clerkAuth";
-import { analyzeAppUrl, generateFirstContactPost, analyzePainPointTrends } from "./gemini";
-import { discoverSubreddits } from "./perplexity";
-import { redditAPI } from "./reddit";
-import { insertAppSchema, insertSubredditSchema, insertPostSchema, insertActivitySchema } from "@shared/schema";
+import { analyzeAppUrl, generateFirstContactPost, analyzePainPointTrends } from "./gemini.js";
+import { discoverSubreddits } from "./perplexity.js";
+import { redditAPI } from "./reddit.js";
+import { supabase } from "./db.js";
+import { isAuthenticated, syncUser, type AuthRequest } from "./supabaseAuth.js";
+import type { 
+  InsertApp, 
+  InsertSubreddit, 
+  InsertPost, 
+  InsertActivity 
+} from "./storage.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
 
   // Auth routes
   app.get('/api/auth/user', [isAuthenticated, syncUser], async (req: any, res) => {
@@ -36,16 +40,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Analyze the app URL using Gemini AI
       const analysis = await analyzeAppUrl(url);
 
-      const appData = insertAppSchema.parse({
-        userId,
+      const appData: InsertApp = {
+        user_id: userId,
         url,
         name: analysis.name,
         description: analysis.description,
-        targetAudience: analysis.targetAudience,
-        painPoints: analysis.painPoints,
+        target_audience: analysis.targetAudience,
+        pain_points: analysis.painPoints,
         features: analysis.features,
         tags: analysis.tags,
-      });
+      };
 
       const app = await storage.createApp(appData);
 

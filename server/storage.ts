@@ -1,28 +1,22 @@
-import {
-  users,
-  apps,
-  subreddits,
-  insights,
-  posts,
-  activities,
-  type User,
-  type UpsertUser,
-  type App,
-  type InsertApp,
-  type Subreddit,
-  type InsertSubreddit,
-  type Insight,
-  type InsertInsight,
-  type Post,
-  type InsertPost,
-  type Activity,
-  type InsertActivity,
-} from "@shared/schema";
-import { db } from "./db";
-import { eq, desc, and, count, sum } from "drizzle-orm";
+import { supabase } from "./db.js";
+import type { Database } from "../lib/supabase.js";
+
+// Type definitions matching database schema
+export type User = Database['public']['Tables']['profiles']['Row'];
+export type UpsertUser = Database['public']['Tables']['profiles']['Insert'];
+export type App = Database['public']['Tables']['apps']['Row'];
+export type InsertApp = Database['public']['Tables']['apps']['Insert'];
+export type Subreddit = Database['public']['Tables']['subreddits']['Row'];
+export type InsertSubreddit = Database['public']['Tables']['subreddits']['Insert'];
+export type Insight = Database['public']['Tables']['insights']['Row'];
+export type InsertInsight = Database['public']['Tables']['insights']['Insert'];
+export type Post = Database['public']['Tables']['posts']['Row'];
+export type InsertPost = Database['public']['Tables']['posts']['Insert'];
+export type Activity = Database['public']['Tables']['activities']['Row'];
+export type InsertActivity = Database['public']['Tables']['activities']['Insert'];
 
 export interface IStorage {
-  // User operations - integrated with Clerk Auth
+  // User operations - integrated with Supabase Auth
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   
@@ -65,117 +59,175 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    const { data: user } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', id)
+      .single();
+    return user || undefined;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.email,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
+    const { data: user } = await supabase
+      .from('profiles')
+      .upsert({
+        ...userData,
+        updated_at: new Date().toISOString(),
       })
-      .returning();
+      .select()
+      .single();
+    
+    if (!user) throw new Error('Failed to upsert user');
     return user;
   }
 
   // App operations
   async createApp(app: InsertApp): Promise<App> {
-    const [newApp] = await db.insert(apps).values(app).returning();
+    const { data: newApp } = await supabase
+      .from('apps')
+      .insert(app)
+      .select()
+      .single();
+    
+    if (!newApp) throw new Error('Failed to create app');
     return newApp;
   }
 
   async getAppsByUserId(userId: string): Promise<App[]> {
-    return await db.select().from(apps).where(eq(apps.userId, userId)).orderBy(desc(apps.createdAt));
+    const { data: apps } = await supabase
+      .from('apps')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    return apps || [];
   }
 
   async getApp(id: string): Promise<App | undefined> {
-    const [app] = await db.select().from(apps).where(eq(apps.id, id));
-    return app;
+    const { data: app } = await supabase
+      .from('apps')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    return app || undefined;
   }
 
   async updateApp(id: string, appData: Partial<InsertApp>): Promise<App> {
-    const [updatedApp] = await db
-      .update(apps)
-      .set({ ...appData, updatedAt: new Date() })
-      .where(eq(apps.id, id))
-      .returning();
+    const { data: updatedApp } = await supabase
+      .from('apps')
+      .update({
+        ...appData,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (!updatedApp) throw new Error('Failed to update app');
     return updatedApp;
   }
 
   // Subreddit operations
   async createSubreddit(subreddit: InsertSubreddit): Promise<Subreddit> {
-    const [newSubreddit] = await db.insert(subreddits).values(subreddit).returning();
+    const { data: newSubreddit } = await supabase
+      .from('subreddits')
+      .insert(subreddit)
+      .select()
+      .single();
+    
+    if (!newSubreddit) throw new Error('Failed to create subreddit');
     return newSubreddit;
   }
 
   async getSubredditsByAppId(appId: string): Promise<Subreddit[]> {
-    return await db.select().from(subreddits).where(eq(subreddits.appId, appId));
+    const { data: subreddits } = await supabase
+      .from('subreddits')
+      .select('*')
+      .eq('app_id', appId);
+    
+    return subreddits || [];
   }
 
   async getMonitoredSubredditsByUserId(userId: string): Promise<Subreddit[]> {
-    return await db
-      .select()
-      .from(subreddits)
-      .where(and(eq(subreddits.userId, userId), eq(subreddits.isMonitored, true)));
+    const { data: subreddits } = await supabase
+      .from('subreddits')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_monitored', true);
+    
+    return subreddits || [];
   }
 
   async updateSubreddit(id: string, subredditData: Partial<InsertSubreddit>): Promise<Subreddit> {
-    const [updatedSubreddit] = await db
-      .update(subreddits)
-      .set(subredditData)
-      .where(eq(subreddits.id, id))
-      .returning();
+    const { data: updatedSubreddit } = await supabase
+      .from('subreddits')
+      .update(subredditData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (!updatedSubreddit) throw new Error('Failed to update subreddit');
     return updatedSubreddit;
   }
 
   // Insight operations
   async createInsight(insight: InsertInsight): Promise<Insight> {
-    const [newInsight] = await db.insert(insights).values(insight).returning();
+    const { data: newInsight } = await supabase
+      .from('insights')
+      .insert(insight)
+      .select()
+      .single();
+    
+    if (!newInsight) throw new Error('Failed to create insight');
     return newInsight;
   }
 
   async getInsightsByAppId(appId: string): Promise<Insight[]> {
-    return await db
-      .select()
-      .from(insights)
-      .where(eq(insights.appId, appId))
-      .orderBy(desc(insights.createdAt));
+    const { data: insights } = await supabase
+      .from('insights')
+      .select('*')
+      .eq('app_id', appId)
+      .order('created_at', { ascending: false });
+    
+    return insights || [];
   }
 
   async getTopPainPoints(userId: string, limit = 10): Promise<{ title: string; count: number }[]> {
-    const results = await db
-      .select({
-        title: insights.title,
-        count: count(insights.id),
-      })
-      .from(insights)
-      .where(and(eq(insights.userId, userId), eq(insights.type, 'pain_point')))
-      .groupBy(insights.title)
-      .orderBy(desc(count(insights.id)))
-      .limit(limit);
-
-    return results.map(r => ({ title: r.title, count: r.count }));
+    // This requires a more complex query - using RPC or aggregation
+    // For now, let's get all pain points and aggregate in memory
+    const { data: insights } = await supabase
+      .from('insights')
+      .select('title')
+      .eq('user_id', userId)
+      .eq('type', 'pain_point');
+    
+    if (!insights) return [];
+    
+    const counts: { [key: string]: number } = {};
+    insights.forEach(insight => {
+      counts[insight.title] = (counts[insight.title] || 0) + 1;
+    });
+    
+    return Object.entries(counts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, limit)
+      .map(([title, count]) => ({ title, count }));
   }
 
   async getTrendingTopics(userId: string, limit = 10): Promise<{ tag: string; count: number }[]> {
-    // This is a simplified implementation - in practice you'd need more complex JSON querying
-    const results = await db
-      .select()
-      .from(insights)
-      .where(eq(insights.userId, userId))
-      .orderBy(desc(insights.createdAt))
+    const { data: insights } = await supabase
+      .from('insights')
+      .select('tags')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
       .limit(100);
-
-    // Extract and count tags
+    
+    if (!insights) return [];
+    
     const tagCounts: { [key: string]: number } = {};
-    results.forEach(insight => {
-      if (insight.tags) {
+    insights.forEach(insight => {
+      if (insight.tags && Array.isArray(insight.tags)) {
         insight.tags.forEach(tag => {
           tagCounts[tag] = (tagCounts[tag] || 0) + 1;
         });
@@ -190,48 +242,73 @@ export class DatabaseStorage implements IStorage {
 
   // Post operations
   async createPost(post: InsertPost): Promise<Post> {
-    const [newPost] = await db.insert(posts).values(post).returning();
+    const { data: newPost } = await supabase
+      .from('posts')
+      .insert(post)
+      .select()
+      .single();
+    
+    if (!newPost) throw new Error('Failed to create post');
     return newPost;
   }
 
   async getPostsByUserId(userId: string): Promise<Post[]> {
-    return await db
-      .select()
-      .from(posts)
-      .where(eq(posts.userId, userId))
-      .orderBy(desc(posts.createdAt));
+    const { data: posts } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    return posts || [];
   }
 
   async getPostsByStatus(userId: string, status: string): Promise<Post[]> {
-    return await db
-      .select()
-      .from(posts)
-      .where(and(eq(posts.userId, userId), eq(posts.status, status)))
-      .orderBy(desc(posts.createdAt));
+    const { data: posts } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', status)
+      .order('created_at', { ascending: false });
+    
+    return posts || [];
   }
 
   async updatePost(id: string, postData: Partial<InsertPost>): Promise<Post> {
-    const [updatedPost] = await db
-      .update(posts)
-      .set({ ...postData, updatedAt: new Date() })
-      .where(eq(posts.id, id))
-      .returning();
+    const { data: updatedPost } = await supabase
+      .from('posts')
+      .update({
+        ...postData,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (!updatedPost) throw new Error('Failed to update post');
     return updatedPost;
   }
 
   // Activity operations
   async createActivity(activity: InsertActivity): Promise<Activity> {
-    const [newActivity] = await db.insert(activities).values(activity).returning();
+    const { data: newActivity } = await supabase
+      .from('activities')
+      .insert(activity)
+      .select()
+      .single();
+    
+    if (!newActivity) throw new Error('Failed to create activity');
     return newActivity;
   }
 
   async getRecentActivities(userId: string, limit = 20): Promise<Activity[]> {
-    return await db
-      .select()
-      .from(activities)
-      .where(eq(activities.userId, userId))
-      .orderBy(desc(activities.createdAt))
+    const { data: activities } = await supabase
+      .from('activities')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
       .limit(limit);
+    
+    return activities || [];
   }
 
   // Stats operations
@@ -240,25 +317,30 @@ export class DatabaseStorage implements IStorage {
     painPoints: number;
     postsDrafted: number;
   }> {
-    const [activeSubreddits] = await db
-      .select({ count: count() })
-      .from(subreddits)
-      .where(and(eq(subreddits.userId, userId), eq(subreddits.isMonitored, true)));
-
-    const [painPointsCount] = await db
-      .select({ count: count() })
-      .from(insights)
-      .where(and(eq(insights.userId, userId), eq(insights.type, 'pain_point')));
-
-    const [postsDrafted] = await db
-      .select({ count: count() })
-      .from(posts)
-      .where(and(eq(posts.userId, userId), eq(posts.status, 'draft')));
+    const [activeSubredditsResult, painPointsResult, postsDraftedResult] = await Promise.all([
+      supabase
+        .from('subreddits')
+        .select('id', { count: 'exact' })
+        .eq('user_id', userId)
+        .eq('is_monitored', true),
+      
+      supabase
+        .from('insights')
+        .select('id', { count: 'exact' })
+        .eq('user_id', userId)
+        .eq('type', 'pain_point'),
+      
+      supabase
+        .from('posts')
+        .select('id', { count: 'exact' })
+        .eq('user_id', userId)
+        .eq('status', 'draft'),
+    ]);
 
     return {
-      activeSubreddits: activeSubreddits.count,
-      painPoints: painPointsCount.count,
-      postsDrafted: postsDrafted.count,
+      activeSubreddits: activeSubredditsResult.count || 0,
+      painPoints: painPointsResult.count || 0,
+      postsDrafted: postsDraftedResult.count || 0,
     };
   }
 }
