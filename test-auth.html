@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SubScout Auth Test</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h2>SubScout Authentication Test</h2>
+    
+    <div id="auth-section">
+        <h3>Sign Up / Sign In</h3>
+        <input type="email" id="email" placeholder="Email" />
+        <input type="password" id="password" placeholder="Password" />
+        <button onclick="signUp()">Sign Up</button>
+        <button onclick="signIn()">Sign In</button>
+        <button onclick="signOut()">Sign Out</button>
+    </div>
+    
+    <div id="user-info"></div>
+
+    <script>
+        const supabaseUrl = 'https://zqtpbhyeegcjubshavaq.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdHBiaHllZWdjanVic2hhdmFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU5MTI3MjksImV4cCI6MjA3MTQ4ODcyOX0.-w-OzViAsZSr8tSgCjjgH9dFVESOFx6FIJAiyNoVHyY';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        async function signUp() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const { data, error } = await supabase.auth.signUp({
+                email: email,
+                password: password
+            });
+            
+            if (error) {
+                alert('Sign up error: ' + error.message);
+            } else {
+                alert('Sign up successful! Check your email.');
+            }
+        }
+        
+        async function signIn() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+            
+            if (error) {
+                alert('Sign in error: ' + error.message);
+            } else {
+                updateUserInfo(data.user);
+            }
+        }
+        
+        async function signOut() {
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+                alert('Sign out error: ' + error.message);
+            } else {
+                updateUserInfo(null);
+            }
+        }
+        
+        function updateUserInfo(user) {
+            const userInfo = document.getElementById('user-info');
+            if (user) {
+                userInfo.innerHTML = `
+                    <h3>User Info</h3>
+                    <p>Email: ${user.email}</p>
+                    <p>ID: ${user.id}</p>
+                    <p>Token: ${user.access_token ? 'Available' : 'None'}</p>
+                `;
+            } else {
+                userInfo.innerHTML = '<p>Not signed in</p>';
+            }
+        }
+        
+        // Check initial auth state
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                updateUserInfo(session.user);
+            }
+        });
+        
+        // Listen for auth changes
+        supabase.auth.onAuthStateChange((event, session) => {
+            updateUserInfo(session?.user || null);
+        });
+    </script>
+</body>
+</html>

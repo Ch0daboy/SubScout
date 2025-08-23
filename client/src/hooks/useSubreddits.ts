@@ -22,15 +22,7 @@ export function useSubreddits(appId?: string) {
     queryKey: appId ? queryKeys.appSubreddits(appId) : queryKeys.subreddits,
     queryFn: async (): Promise<Subreddit[]> => {
       const url = appId ? `/api/subreddits?appId=${appId}` : '/api/subreddits';
-      const response = await fetch(url, { 
-        credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch subreddits');
-      }
-      
+      const response = await apiRequest('GET', url);
       return response.json();
     },
     enabled: isAuthenticated,
@@ -73,15 +65,7 @@ export function useInsights() {
   return useQuery({
     queryKey: ['/api/insights'],
     queryFn: async (): Promise<any[]> => {
-      const response = await fetch('/api/insights', { 
-        credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch insights');
-      }
-      
+      const response = await apiRequest('GET', '/api/insights');
       const data = await response.json();
       return Array.isArray(data) ? data : [];
     },
@@ -96,15 +80,7 @@ export function usePainPoints() {
   return useQuery({
     queryKey: ['/api/insights/pain-points'],
     queryFn: async (): Promise<InsightsData[]> => {
-      const response = await fetch('/api/insights/pain-points', { 
-        credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch pain points');
-      }
-      
+      const response = await apiRequest('GET', '/api/insights/pain-points');
       const data = await response.json();
       return Array.isArray(data) ? data : [];
     },
@@ -119,15 +95,7 @@ export function usePosts() {
   return useQuery({
     queryKey: ['/api/posts'],
     queryFn: async (): Promise<PostsData[]> => {
-      const response = await fetch('/api/posts', { 
-        credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch posts');
-      }
-      
+      const response = await apiRequest('GET', '/api/posts');
       const data = await response.json();
       return Array.isArray(data) ? data : [];
     },

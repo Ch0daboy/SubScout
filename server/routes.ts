@@ -13,7 +13,8 @@ import {
   commonSchemas,
   rateLimit,
   sanitizeString
-} from "./validation.js";\nimport { logger } from \"./logger.js\";
+} from "./validation.js";
+import { logger } from "./logger.js";
 import type { 
   InsertApp, 
   InsertSubreddit, 
@@ -33,6 +34,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       logger.apiError('/api/auth/user', 'getUser', error, req.user?.id);
       res.status(500).json({ message: "Failed to fetch user" });
     }
+  });
+
+  // Auth login route - redirect to Supabase Auth UI
+  app.get('/api/login', (req, res) => {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const origin = req.get('origin') || 'http://localhost:5000'; // Fixed port
+    
+    if (!supabaseUrl) {
+      return res.status(500).json({ message: 'Supabase configuration missing' });
+    }
+    
+    // Use Supabase hosted auth UI (supports multiple providers)
+    const authUrl = `${supabaseUrl}/auth/v1/authorize`;
+    const params = new URLSearchParams({
+      provider: 'github', // Using GitHub since you have credentials configured
+      redirect_to: origin
+    });
+    
+    const redirectUrl = `${authUrl}?${params.toString()}`;
+    logger.apiSuccess('/api/login', 'redirect', { redirectUrl, origin });
+    res.redirect(redirectUrl);
+  });
+
+  // Auth logout route - redirect to sign out
+  app.get('/api/logout', (req, res) => {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const origin = req.get('origin') || 'http://localhost:5000'; // Fixed port
+    
+    if (!supabaseUrl) {
+      return res.status(500).json({ message: 'Supabase configuration missing' });
+    }
+    
+    const redirectUrl = `${supabaseUrl}/auth/v1/logout?redirect_to=${encodeURIComponent(origin)}`;
+    logger.apiSuccess('/api/logout', 'redirect', { redirectUrl, origin });
+    res.redirect(redirectUrl);
   });
 
   // App routes with validation and rate limiting

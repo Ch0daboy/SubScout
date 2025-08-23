@@ -16,15 +16,7 @@ export function useApps() {
   return useQuery({
     queryKey: queryKeys.apps,
     queryFn: async (): Promise<App[]> => {
-      const response = await fetch('/api/apps', { 
-        credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch apps');
-      }
-      
+      const response = await apiRequest('GET', '/api/apps');
       return response.json();
     },
     enabled: isAuthenticated,
@@ -38,15 +30,7 @@ export function useApp(appId: string) {
   return useQuery({
     queryKey: queryKeys.app(appId),
     queryFn: async (): Promise<App> => {
-      const response = await fetch(`/api/apps/${appId}`, { 
-        credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch app');
-      }
-      
+      const response = await apiRequest('GET', `/api/apps/${appId}`);
       return response.json();
     },
     enabled: isAuthenticated && !!appId,
@@ -74,15 +58,7 @@ export function useStats() {
   return useQuery({
     queryKey: ['/api/stats'],
     queryFn: async (): Promise<StatsData> => {
-      const response = await fetch('/api/stats', { 
-        credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch stats');
-      }
-      
+      const response = await apiRequest('GET', '/api/stats');
       const data = await response.json();
       return data || { activeSubreddits: 0, painPoints: 0, postsDrafted: 0 };
     },
@@ -97,15 +73,7 @@ export function useActivities() {
   return useQuery({
     queryKey: ['/api/activities'],
     queryFn: async (): Promise<any[]> => {
-      const response = await fetch('/api/activities', { 
-        credentials: 'include',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}` }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch activities');
-      }
-      
+      const response = await apiRequest('GET', '/api/activities');
       const data = await response.json();
       return Array.isArray(data) ? data : [];
     },
