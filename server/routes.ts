@@ -55,9 +55,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: analysis.name,
         description: analysis.description,
         target_audience: analysis.targetAudience,
-        pain_points: analysis.painPoints,
-        features: analysis.features,
-        tags: analysis.tags,
+        pain_points: analysis.painPoints.map((p) => ({ title: p })),
+        features: analysis.features.map((f) => ({ name: f })),
+        tags: analysis.tags.map((t) => ({ name: t })),
       };
 
       const app = await storage.createApp(appData);
@@ -216,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const postData = await generateFirstContactPost(
         subreddit.name,
         app.description || '',
-        app.pain_points || []
+        (app.pain_points || []).map((p: any) => p.title)
       );
 
       const post = await storage.createPost({
