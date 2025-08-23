@@ -64,7 +64,7 @@ export class DatabaseStorage implements IStorage {
       .from('profiles')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
     return user || undefined;
   }
 

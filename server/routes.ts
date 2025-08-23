@@ -36,10 +36,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper to determine canonical origin for redirects
+  const getOrigin = (req: any) => {
+    // Prefer explicit env if set
+    const envOrigin = process.env.PUBLIC_ORIGIN || process.env.FRONTEND_URL;
+    if (envOrigin) return envOrigin.replace(/\/$/, '');
+
+    // Derive from forwarded headers (works behind Vercel/Proxies)
+    const xfProto = (req.headers['x-forwarded-proto'] || '').toString().split(',')[0] || req.protocol || 'https';
+    const xfHost = (req.headers['x-forwarded-host'] || '').toString().split(',')[0];
+    const host = xfHost || req.headers['host'];
+    if (host) return `${xfProto}://${host}`;
+
+    // Last resort sensible default for local dev
+    return 'http://localhost:5000';
+  };
+
   // Auth login route - redirect to Supabase Auth UI
   app.get('/api/login', (req, res) => {
     const supabaseUrl = process.env.SUPABASE_URL;
-    const origin = req.get('origin') || 'http://localhost:5000'; // Fixed port
+    const origin = getOrigin(req);
     
     if (!supabaseUrl) {
       return res.status(500).json({ message: 'Supabase configuration missing' });
@@ -60,7 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth logout route - redirect to sign out
   app.get('/api/logout', (req, res) => {
     const supabaseUrl = process.env.SUPABASE_URL;
-    const origin = req.get('origin') || 'http://localhost:5000'; // Fixed port
+    const origin = getOrigin(req);
     
     if (!supabaseUrl) {
       return res.status(500).json({ message: 'Supabase configuration missing' });
