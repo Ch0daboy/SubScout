@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { useApps } from "@/hooks/useApps";
+import { useSubreddits } from "@/hooks/useSubreddits";
+import { usePosts } from "@/hooks/useSubreddits";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,20 +18,14 @@ export default function PostDrafting() {
   const { toast } = useToast();
 
   // Apps query
-  const { data: apps } = useQuery({
-    queryKey: ["/api/apps"],
-  });
+  const { data: apps = [] } = useApps();
 
   // Subreddits query for selected app
-  const { data: subreddits } = useQuery({
-    queryKey: ["/api/apps", selectedApp, "subreddits"],
-    enabled: !!selectedApp,
-  });
+  const { data: subreddits = [] } = useSubreddits(selectedApp || undefined);
 
   // Recent draft posts query
-  const { data: draftPosts, isLoading: draftsLoading } = useQuery({
-    queryKey: ["/api/posts", { status: "draft" }],
-  });
+  const { data: allPosts = [], isLoading: draftsLoading } = usePosts();
+  const draftPosts = allPosts.filter((post: any) => post.status === 'draft');
 
   // Generate post mutation
   const generatePostMutation = useMutation({

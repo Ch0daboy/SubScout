@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { isUnauthorizedError } from "@/lib/authUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { usePosts } from "@/hooks/useSubreddits";
 import Navigation from "@/components/navigation";
 import PostDrafting from "@/components/post-drafting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,21 +23,13 @@ export default function Posts() {
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  // Posts queries
-  const { data: draftPosts, isLoading: draftsLoading } = useQuery({
-    queryKey: ["/api/posts", { status: "draft" }],
-    enabled: isAuthenticated,
-  });
+  // Posts query
+  const { data: allPosts = [], isLoading: postsLoading } = usePosts();
 
-  const { data: approvedPosts, isLoading: approvedLoading } = useQuery({
-    queryKey: ["/api/posts", { status: "approved" }],
-    enabled: isAuthenticated,
-  });
-
-  const { data: publishedPosts, isLoading: publishedLoading } = useQuery({
-    queryKey: ["/api/posts", { status: "published" }],
-    enabled: isAuthenticated,
-  });
+  // Filter posts by status
+  const draftPosts = allPosts.filter((post: any) => post.status === 'draft');
+  const approvedPosts = allPosts.filter((post: any) => post.status === 'approved');
+  const publishedPosts = allPosts.filter((post: any) => post.status === 'published');
 
   // Update post mutation
   const updatePostMutation = useMutation({
@@ -161,7 +154,7 @@ export default function Posts() {
               <TabsContent value="drafts" className="space-y-4">
                 <PostList 
                   posts={draftPosts}
-                  isLoading={draftsLoading}
+                  isLoading={postsLoading}
                   emptyMessage="No draft posts yet. Generate some posts to get started."
                   onApprove={approvePost}
                   onEdit={openEditDialog}
@@ -172,7 +165,7 @@ export default function Posts() {
               <TabsContent value="approved" className="space-y-4">
                 <PostList 
                   posts={approvedPosts}
-                  isLoading={approvedLoading}
+                  isLoading={postsLoading}
                   emptyMessage="No approved posts yet. Approve some drafts first."
                   onPublish={publishPost}
                   onEdit={openEditDialog}
@@ -183,7 +176,7 @@ export default function Posts() {
               <TabsContent value="published" className="space-y-4">
                 <PostList 
                   posts={publishedPosts}
-                  isLoading={publishedLoading}
+                  isLoading={postsLoading}
                   emptyMessage="No published posts yet."
                   showActions={false}
                 />

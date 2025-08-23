@@ -1,8 +1,7 @@
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { isUnauthorizedError } from "@/lib/authUtils";
+import { useStats, useActivities } from "@/hooks/useApps";
 import Navigation from "@/components/navigation";
 import AppAnalysis from "@/components/app-analysis";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,16 +12,10 @@ export default function Dashboard() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   // Stats query
-  const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ["/api/stats"],
-    enabled: isAuthenticated,
-  });
+  const { data: stats, isLoading: statsLoading } = useStats();
 
   // Recent activities query
-  const { data: activities, isLoading: activitiesLoading } = useQuery({
-    queryKey: ["/api/activities"],
-    enabled: isAuthenticated,
-  });
+  const { data: activities, isLoading: activitiesLoading } = useActivities();
 
   // Redirect to login if not authenticated
   useEffect(() => {

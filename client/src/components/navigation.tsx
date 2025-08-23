@@ -70,13 +70,13 @@ export default function Navigation() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center space-x-2" data-testid="button-user-menu">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.profileImageUrl} alt="User avatar" />
+                    <AvatarImage src={user?.profileImageUrl ?? undefined} alt="User avatar" />
                     <AvatarFallback data-testid="text-user-initials">
-                      {getInitials(user?.firstName, user?.lastName)}
+                      {getInitials(user?.firstName ?? undefined, user?.lastName ?? undefined)}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium text-gray-700 hidden md:block" data-testid="text-user-name">
-                    {getDisplayName(user?.firstName, user?.lastName, user?.email)}
+                    {getDisplayName(user?.firstName ?? undefined, user?.lastName ?? undefined, user?.email ?? undefined)}
                   </span>
                 </Button>
               </DropdownMenuTrigger>

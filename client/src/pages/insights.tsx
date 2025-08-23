@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { isUnauthorizedError } from "@/lib/authUtils";
+import { useApps } from "@/hooks/useApps";
+import { useInsights, usePainPoints } from "@/hooks/useSubreddits";
 import Navigation from "@/components/navigation";
 import InsightsChart from "@/components/insights-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,28 +17,16 @@ export default function Insights() {
   const [selectedApp, setSelectedApp] = useState<string>("");
 
   // Apps query
-  const { data: apps, isLoading: appsLoading } = useQuery({
-    queryKey: ["/api/apps"],
-    enabled: isAuthenticated,
-  });
+  const { data: apps, isLoading: appsLoading } = useApps();
 
   // Pain points query
-  const { data: painPoints, isLoading: painPointsLoading } = useQuery({
-    queryKey: ["/api/insights/pain-points"],
-    enabled: isAuthenticated,
-  });
+  const { data: painPoints, isLoading: painPointsLoading } = usePainPoints();
 
   // Trending topics query
-  const { data: trendingTopics, isLoading: trendsLoading } = useQuery({
-    queryKey: ["/api/insights/trending"],
-    enabled: isAuthenticated,
-  });
+  const { data: trendingTopics = [], isLoading: trendsLoading } = useInsights();
 
   // App insights query
-  const { data: appInsights, isLoading: insightsLoading } = useQuery({
-    queryKey: ["/api/apps", selectedApp, "insights"],
-    enabled: !!selectedApp,
-  });
+  const { data: appInsights = [], isLoading: insightsLoading } = useInsights();
 
   // Set default app when apps load
   useEffect(() => {

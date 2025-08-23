@@ -13,7 +13,7 @@ import {
   commonSchemas,
   rateLimit,
   sanitizeString
-} from "./validation.js";
+} from "./validation.js";\nimport { logger } from \"./logger.js\";
 import type { 
   InsertApp, 
   InsertSubreddit, 
@@ -30,7 +30,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
-      console.error("Error fetching user:", error);
+      logger.apiError('/api/auth/user', 'getUser', error, req.user?.id);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });

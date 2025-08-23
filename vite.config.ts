@@ -6,6 +6,11 @@ export default defineConfig({
   plugins: [
     react(),
   ],
+  define: {
+    // Explicitly define environment variables for production builds
+    'process.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL),
+    'process.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY),
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),

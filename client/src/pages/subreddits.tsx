@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { isUnauthorizedError } from "@/lib/authUtils";
+import { useApps } from "@/hooks/useApps";
+import { useSubreddits } from "@/hooks/useSubreddits";
 import Navigation from "@/components/navigation";
 import SubredditDiscovery from "@/components/subreddit-discovery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,10 +16,7 @@ export default function Subreddits() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   // Apps query to show subreddits
-  const { data: apps, isLoading: appsLoading } = useQuery({
-    queryKey: ["/api/apps"],
-    enabled: isAuthenticated,
-  });
+  const { data: apps = [], isLoading: appsLoading } = useApps();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -97,10 +94,7 @@ function AppSubreddits({ app }: { app: any }) {
   const { toast } = useToast();
 
   // Query subreddits for this app
-  const { data: subredditData, isLoading: subredditsLoading, refetch } = useQuery({
-    queryKey: ["/api/apps", app.id, "subreddits"],
-    enabled: !!app.id,
-  });
+  const { data: subredditData = [], isLoading: subredditsLoading, refetch } = useSubreddits(app.id);
 
   useEffect(() => {
     if (subredditData) {

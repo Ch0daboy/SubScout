@@ -44,7 +44,14 @@ echo "https://subscout.vercel.app" | npx vercel env add FRONTEND_URL production
 echo "https://subscout.vercel.app" | npx vercel env add FRONTEND_URL preview
 
 echo "✅ Environment variables setup complete!"
+echo ""
 echo "📝 Remember to:"
 echo "   1. Update FRONTEND_URL after your first deployment"
-echo "   2. Run 'npx vercel env list' to verify all variables"
+echo "   2. Run 'npx vercel env list' to verify all variables"  
 echo "   3. Deploy with 'npx vercel --prod'"
+echo ""
+echo "🔧 For local testing with environment variables:"
+echo "   npm run build:test && npm start"
+echo ""
+echo "🚀 For Vercel deployment:"
+echo "   Update vercel-build script to use environment variables in production"
